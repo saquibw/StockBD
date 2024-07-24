@@ -19,8 +19,12 @@ public class InstrumentService {
 		return repository.findAll();
 	}
 	
-	public void save(Instrument instrument) {
-		repository.save(instrument);
+	public Instrument save(Instrument instrument) {
+		return repository.save(instrument);
+	}
+	
+	public void saveAll(List<Instrument> instrumentList) {
+		repository.saveAllAndFlush(instrumentList);
 	}
 
 }
