@@ -1,6 +1,9 @@
 package com.stockbd.model;
 
+import java.time.LocalDate;
+
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -23,11 +26,14 @@ public class InstrumentPrice {
 	private double highPrice;
 	private double lowPrice;
 	private double closePrice;
+	private double yesterdayClosePrice;
 	private int tradeCount;
-	private long tradeVolume;
+	private double tradeValue;
+	private int tradeVolume;
+	private LocalDate date;
 	
 	@ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "instrument_id")
+    @JoinColumn(name = "instrument_id", nullable = false)
     private Instrument instrument;
 
 }

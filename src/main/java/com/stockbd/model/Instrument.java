@@ -25,7 +25,4 @@ public class Instrument {
 	private String code;
 	private String name;
 	private String category;
-	
-	@OneToMany(mappedBy = "instrument", cascade = CascadeType.ALL, orphanRemoval = true)
-	private List<InstrumentPrice> price = new ArrayList<>();
 }
