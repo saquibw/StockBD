@@ -1,5 +1,6 @@
 package com.stockbd.service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -34,6 +35,7 @@ public class InstrumentParserService {
 		this.instrumentPriceService = instrumentPriceService;
 	}
 
+	
 	public void getInstrumentList() {
 		//if (!shallProceed("")) return;
 		Document doc = documentFetchService.getDailyInstrumentList();
@@ -74,29 +76,48 @@ public class InstrumentParserService {
 		price.setClosePrice(parseDouble(columns.get(5)));
 		price.setYesterdayClosePrice(parseDouble(columns.get(6)));
 		price.setTradeCount(parseInteger(columns.get(8)));
-		price.setTradeValue(parseDouble(columns.get(9)) * 1000000);
+		
+		BigDecimal tradeValue = parseBigDecimal(columns.get(9)).multiply(BigDecimal.valueOf(1_000_000));
+		price.setTradeValue(tradeValue.doubleValue());
+		
 		price.setTradeVolume(parseInteger(columns.get(10)));
 		price.setDate(LocalDate.now());
+		price.setInstrument(instrument);
 		
 		instrumentPriceService.save(price);
 	}
 	
 	private double parseDouble(String price) {
 		if (StringUtils.hasText(price)) {
-			return Double.parseDouble(price);
+			BigDecimal value = new BigDecimal(sanitize(price));
+			return value.doubleValue();
 		}
 		return 0;
 	}
 	
+	private BigDecimal parseBigDecimal(String price) {
+	    if (StringUtils.hasText(price)) {
+	        return new BigDecimal(sanitize(price));
+	    }
+	    return BigDecimal.ZERO;
+	}
+	
 	private int parseInteger(String price) {
 		if (StringUtils.hasText(price)) {
-			return Integer.parseInt(price);
+			return Integer.parseInt(sanitize(price));
 		}
 		return 0;
 	}
+	
+	private String sanitize(String input) {
+        if (input == null) {
+            return null;
+        }
+        return input.replace(",", "");
+    }
 
 	private boolean shallProceed(String currentDateTimeText) {
-		currentDateTimeText = "Latest Share Price On Jul 30, 2024 at 2:20 PM";
+		//currentDateTimeText = "Latest Share Price On Jul 30, 2024 at 2:20 PM";
 		currentDateTimeText = currentDateTimeText.split("On")[1].split("at")[0].strip();
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM dd, yyyy");
 		LocalDate lastUpdatedAt = LocalDate.parse(currentDateTimeText, formatter);

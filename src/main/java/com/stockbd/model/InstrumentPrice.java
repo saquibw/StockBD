@@ -35,5 +35,4 @@ public class InstrumentPrice {
 	@ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "instrument_id", nullable = false)
     private Instrument instrument;
-
 }

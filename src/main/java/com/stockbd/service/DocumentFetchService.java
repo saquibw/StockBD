@@ -17,18 +17,20 @@ public class DocumentFetchService {
 		Document doc = null;
 		try {
 			log.info("Instruments fetch process initiated");
-			doc = Jsoup.connect("https://www.dsebd.org/latest_share_price_scroll_l.php").get();
-			
-//			System.out.println(doc);
-//			File file = new File("/home/saquibul.waheed@nad.neura-robotics.com/Saquib/bodyTable.txt");
-//			FileWriter writer = new FileWriter(file);
-//		    writer.write(doc.body().select("#RightBody table").html());
-//		    writer.close();
+			doc = Jsoup.connect("https://www.dsebd.org/latest_share_price_scroll_l.php").get();		
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		return doc;
+	}
+	
+	private void writeToFile(Document doc) throws IOException {
+		System.out.println(doc);
+		File file = new File("/home/saquibul.waheed@nad.neura-robotics.com/Saquib/bodyTable.txt");
+		FileWriter writer = new FileWriter(file);
+	    writer.write(doc.body().select("#RightBody table").html());
+	    writer.close();
 	}
 
 }
