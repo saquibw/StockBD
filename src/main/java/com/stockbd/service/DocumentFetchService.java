@@ -25,11 +25,25 @@ public class DocumentFetchService {
 		return doc;
 	}
 	
+	public Document getInstrumentDetails(String instrumentName) {
+		Document doc = null;
+		try {
+			log.info("Fetching information for: {}", instrumentName);
+			String instrumentDetailsUrl = String.format("https://www.dsebd.org/displayCompany.php?name=%s", instrumentName);
+			doc = Jsoup.connect(instrumentDetailsUrl).get();
+			writeToFile(doc);
+		} catch (Exception e) {
+			log.error(e.getMessage(), e);
+		}
+		return doc;
+	}
+	
 	private void writeToFile(Document doc) throws IOException {
-		System.out.println(doc);
-		File file = new File("/home/saquibul.waheed@nad.neura-robotics.com/Saquib/bodyTable.txt");
+		//System.out.println(doc);
+		File file = new File("/home/saquib/Saquib/instrument_info.txt");
 		FileWriter writer = new FileWriter(file);
-	    writer.write(doc.body().select("#RightBody table").html());
+	    //writer.write(doc.body().select("#RightBody table").html());
+		writer.write(doc.body().select("#RightBody").html());
 	    writer.close();
 	}
 

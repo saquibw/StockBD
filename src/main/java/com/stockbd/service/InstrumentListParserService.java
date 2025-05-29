@@ -18,15 +18,18 @@ import com.stockbd.model.Instrument;
 import com.stockbd.model.InstrumentPrice;
 
 import lombok.extern.slf4j.Slf4j;
+import static com.stockbd.utils.ConversionUtils.parseDouble;
+import static com.stockbd.utils.ConversionUtils.parseBigDecimal;
+import static com.stockbd.utils.ConversionUtils.parseLong;
 
 @Service
 @Slf4j
-public class InstrumentParserService {
+public class InstrumentListParserService {
 	private DocumentFetchService documentFetchService;
 	private InstrumentService instrumentService;
 	private InstrumentPriceService instrumentPriceService;
 
-	public InstrumentParserService(
+	public InstrumentListParserService(
 			DocumentFetchService documentFetchService, 
 			InstrumentService instrumentService, 
 			InstrumentPriceService instrumentPriceService) {
@@ -41,10 +44,10 @@ public class InstrumentParserService {
 		Document doc = documentFetchService.getDailyInstrumentList();
 		Element body = doc.getElementById("RightBody");
 		String currentDateTimeText = body.select(".topBodyHead").text();
+		LocalDate latestDate = getCurrentDateFromString(currentDateTimeText);
 
 		List<Instrument> existingInstruments = instrumentService.getAll();
 		Map<String, Instrument> existingInstrumentsMap = existingInstruments.stream().collect(Collectors.toMap(Instrument::getCode, instrument -> instrument, (existing, replacement) -> existing));
-		boolean shallProceed = shallProceed(currentDateTimeText);
 
 		Elements instrumentElementList = body.select(".shares-table tbody");
 		for (Element instrumentElement : instrumentElementList) {
@@ -52,75 +55,56 @@ public class InstrumentParserService {
 			List<String> columns = row.eachText();
 			String instrumentCode = columns.get(1);
 			Instrument instrument = null;
+			
 			if (StringUtils.hasText(instrumentCode)) {
+				
 				if (!existingInstrumentsMap.containsKey(instrumentCode)) {
 					log.info("Instrument {} not found in DB. Creating...", instrumentCode);
-					instrument = instrumentService.save(new Instrument(null, instrumentCode, "", ""));
+					
+					instrument = new Instrument();
+					instrument.setCode(instrumentCode);
+					instrumentService.save(instrument);
+					
 					log.info("Instrument {} created successfully", instrumentCode);
 				} else {
 					instrument = existingInstrumentsMap.get(instrumentCode);
+					
 					log.info("Instrument {} found in DB.", instrument);
 				}				
 			}
-			if (shallProceed) {
-				saveDailyPrice(instrument, columns);
+			if (shallProceed(latestDate)) {
+				saveDailyPrice(instrument, columns, latestDate);
 			}
 		}		
 	}
 
-	public void saveDailyPrice(Instrument instrument, List<String> columns) {
+	public void saveDailyPrice(Instrument instrument, List<String> columns, LocalDate date) {
 		InstrumentPrice price = new InstrumentPrice();
 		price.setLastTradePrice(parseDouble(columns.get(2)));
 		price.setHighPrice(parseDouble(columns.get(3)));	
 		price.setLowPrice(parseDouble(columns.get(4)));
 		price.setClosePrice(parseDouble(columns.get(5)));
 		price.setYesterdayClosePrice(parseDouble(columns.get(6)));
-		price.setTradeCount(parseInteger(columns.get(8)));
+		price.setTradeCount(parseLong(columns.get(8)));
 		
 		BigDecimal tradeValue = parseBigDecimal(columns.get(9)).multiply(BigDecimal.valueOf(1_000_000));
 		price.setTradeValue(tradeValue.doubleValue());
 		
-		price.setTradeVolume(parseInteger(columns.get(10)));
-		price.setDate(LocalDate.now());
+		price.setTradeVolume(parseLong(columns.get(10)));
+		price.setDate(date);
 		price.setInstrument(instrument);
 		
 		instrumentPriceService.save(price);
 	}
 	
-	private double parseDouble(String price) {
-		if (StringUtils.hasText(price)) {
-			BigDecimal value = new BigDecimal(sanitize(price));
-			return value.doubleValue();
-		}
-		return 0;
-	}
-	
-	private BigDecimal parseBigDecimal(String price) {
-	    if (StringUtils.hasText(price)) {
-	        return new BigDecimal(sanitize(price));
-	    }
-	    return BigDecimal.ZERO;
-	}
-	
-	private int parseInteger(String price) {
-		if (StringUtils.hasText(price)) {
-			return Integer.parseInt(sanitize(price));
-		}
-		return 0;
-	}
-	
-	private String sanitize(String input) {
-        if (input == null) {
-            return null;
-        }
-        return input.replace(",", "");
-    }
-
-	private boolean shallProceed(String currentDateTimeText) {
+	private LocalDate getCurrentDateFromString(String currentDateTimeText) {
 		//currentDateTimeText = "Latest Share Price On Jul 30, 2024 at 2:20 PM";
 		currentDateTimeText = currentDateTimeText.split("On")[1].split("at")[0].strip();
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM dd, yyyy");
-		LocalDate lastUpdatedAt = LocalDate.parse(currentDateTimeText, formatter);
+		return LocalDate.parse(currentDateTimeText, formatter);
+	}
+
+	private boolean shallProceed(LocalDate lastUpdatedAt) {
 		boolean shallProceed = false;
 		
 		InstrumentPrice latestPrice = instrumentPriceService.findLatest();

@@ -19,6 +19,10 @@ public class InstrumentService {
 		return repository.findAll();
 	}
 	
+	public Instrument getBy(String instrumentCode) {
+		return repository.getByCode(instrumentCode);
+	}
+	
 	public Instrument save(Instrument instrument) {
 		return repository.save(instrument);
 	}
